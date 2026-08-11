@@ -45,10 +45,64 @@ void test_call_and_return(void) {
     assert(cpu.SP == 0);
 }
 
+void test_alu_add_carry(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.V[0] = 0xF0;
+    cpu.V[1] = 0x20;
+
+    cpu.memory[0x200] = 0x80;
+    cpu.memory[0x201] = 0x14;
+
+    chip8_cycle(&cpu);
+    assert(cpu.V[0] == 0x10);
+    assert(cpu.V[0xF] == 1);
+}
+
+void test_alu_sub_borrow(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.V[0] = 0x05;
+    cpu.V[1] = 0x10;
+
+    cpu.memory[0x200] = 0x80;
+    cpu.memory[0x201] = 0x15;
+
+    chip8_cycle(&cpu);
+    assert(cpu.V[0] == (uint8_t)(5 - 16));
+    assert(cpu.V[0xF] == 0);
+}
+
+void test_alu_shifts(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.V[0] = 0b10000001;
+
+    cpu.memory[0x200] = 0x80;
+    cpu.memory[0x201] = 0x06;
+    chip8_cycle(&cpu);
+    assert(cpu.V[0] == 0b01000000);
+    assert(cpu.V[0xF] == 1);
+
+    cpu.V[0] = 0b10000001;
+
+    cpu.memory[0x202] = 0x80;
+    cpu.memory[0x203] = 0x0E;
+    chip8_cycle(&cpu);
+    assert(cpu.V[0] == 0b00000010);
+    assert(cpu.V[0xF] == 1);
+}
+
 int main(void) {
     test_initialization();
     test_opcodes_6xkk_7xkk();
     test_call_and_return();
+    test_alu_add_carry();
+    test_alu_sub_borrow();
+    test_alu_shifts();
 
     printf("OK: All tests passed.\n");
     return 0;

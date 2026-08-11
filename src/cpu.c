@@ -53,7 +53,7 @@ bool chip8_load_rom(chip8_t *cpu, const char *filename) {
 }
 
 void chip8_cycle(chip8_t *cpu) {
-    uint16_t opcode = (cpu->memory[cpu->PC] << 8) | cpu->memory[cpu->PC + 1];
+    const uint16_t opcode = (cpu->memory[cpu->PC] << 8) | cpu->memory[cpu->PC + 1];
     cpu->PC += 2;
 
     const uint8_t x = (opcode & 0x0F00) >> 8;
@@ -112,6 +112,66 @@ void chip8_cycle(chip8_t *cpu) {
 
         case 0x7000: // 7XKK: Set Vx += KK
             cpu->V[x] += kk;
+            break;
+
+        case 0x8000:
+            switch (opcode & 0x000F) {
+                case 0x0: // 8XY0: Set Vx = Vy
+                    cpu->V[x] = cpu->V[y];
+                    break;
+
+                case 0x1: // 8XY1: Set Vx = Vx | Vy
+                    cpu->V[x] |= cpu->V[y];
+                    break;
+
+                case 0x2: // 8XY2: Set Vx = Vx & Vy
+                    cpu->V[x] &= cpu->V[y];
+                    break;
+
+                case 0x3: // 8XY3: Set Vx = Vx ^ Vy
+                    cpu->V[x] ^= cpu->V[y];
+                    break;
+
+                case 0x4: {
+                    // 8XY4: Set Vx += Vy, set VF = carry
+                    const uint16_t sum = cpu->V[x] + cpu->V[y];
+                    cpu->V[x] = sum & 0xFF;
+                    cpu->V[0xF] = (sum > 255) ? 1 : 0;
+                    break;
+                }
+
+                case 0x0005: { // 8XY5: Set Vx = Vx - Vy, set VF = NOT borrow
+                    const uint8_t not_borrow = (cpu->V[x] >= cpu->V[y]) ? 1 : 0;
+                    cpu->V[x] = cpu->V[x] - cpu->V[y];
+                    cpu->V[0xF] = not_borrow;
+                    break;
+                }
+
+                case 0x0006: { // 8XY6: Set Vx = Vx >> 1, set VF = LSB
+                    const uint8_t lsb = cpu->V[x] & 0x01;
+                    cpu->V[x] >>= 1;
+                    cpu->V[0xF] = lsb;
+                    break;
+                }
+
+                case 0x0007: { // 8XY7: Set Vx = Vy - Vx, set VF = NOT borrow
+                    const uint8_t not_borrow = (cpu->V[y] >= cpu->V[x]) ? 1 : 0;
+                    cpu->V[x] = cpu->V[y] - cpu->V[x];
+                    cpu->V[0xF] = not_borrow;
+                    break;
+                }
+
+                case 0x000E: { // 8XYE: Set Vx = Vx << 1, set VF = MSB
+                    const uint8_t msb = (cpu->V[x] & 0x80) >> 7;
+                    cpu->V[x] <<= 1;
+                    cpu->V[0xF] = msb;
+                    break;
+                }
+
+                default:
+                    printf("Unknown opcode [0x8000]: 0x%04X\n", opcode);
+                    break;
+            }
             break;
 
         default:
