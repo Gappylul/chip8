@@ -1,7 +1,61 @@
+#include <stdio.h>
+
 #include "chip8.h"
 #include <string.h>
+
+const uint8_t fontset[80] = {
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
 
 void chip8_init(chip8_t *cpu) {
     memset(cpu, 0, sizeof(chip8_t));
     cpu->PC = CHIP8_PROGRAM_START;
+
+    for (int i = 0; i < 80; i++) {
+        cpu->memory[CHIP8_FONTSET_START + i] = fontset[i];
+    }
+}
+
+bool chip8_load_rom(chip8_t *cpu, const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        return false;
+    }
+
+    fseek(file, 0, SEEK_END);
+    const long size = ftell(file);
+    rewind(file);
+
+    const long max_size = CHIP8_MEMORY_SIZE - CHIP8_PROGRAM_START;
+    if (size > max_size) {
+        fclose(file);
+        return false;
+    }
+
+    fread(&cpu->memory[CHIP8_PROGRAM_START], 1, size, file);
+    fclose(file);
+    return true;
+}
+
+void chip8_cycle(chip8_t *cpu) {
+    uint16_t opcode = (cpu->memory[cpu->PC] << 8) | cpu->memory[cpu->PC + 1];
+
+    // TODO: Decode
+
+    cpu->PC += 2;
 }

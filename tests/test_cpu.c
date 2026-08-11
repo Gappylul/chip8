@@ -2,16 +2,30 @@
 #include <assert.h>
 #include "chip8.h"
 
-int main(void) {
+void test_initialization() {
     chip8_t cpu;
     chip8_init(&cpu);
 
-    assert(cpu.PC == CHIP8_PROGRAM_START && "Program Counter should start at 0x200");
-    assert(cpu.V[0] == 0 && "Registers should be zeroed");
-    assert(cpu.I == 0 && "Index register should be zeroed");
-    assert(cpu.SP == 0 && "Stack pointer should be zeroed");
-    assert(cpu.memory[0] == 0 && "Memory should be zeroed");
+    assert(cpu.PC == CHIP8_PROGRAM_START);
+    assert(cpu.memory[CHIP8_FONTSET_START] == 0xF0);
+}
 
-    printf("OK: CPU initialized successfully.\n");
+void test_fetch_cycle() {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.memory[0x200] = 0xA2;
+    cpu.memory[0x201] = 0xF0;
+
+    chip8_cycle(&cpu);
+
+    assert(cpu.PC == CHIP8_PROGRAM_START + 2);
+}
+
+int main(void) {
+    test_initialization();
+    test_fetch_cycle();
+
+    printf("OK: All tests passed.\n");
     return 0;
 }

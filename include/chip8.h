@@ -8,6 +8,7 @@
 #define CHIP8_DISPLAY_WIDTH 64
 #define CHIP8_DISPLAY_HEIGHT 32
 #define CHIP8_PROGRAM_START 0x200
+#define CHIP8_FONTSET_START 0x050
 
 typedef struct {
     uint8_t memory[CHIP8_MEMORY_SIZE];
@@ -23,5 +24,7 @@ typedef struct {
 } chip8_t;
 
 void chip8_init(chip8_t *cpu);
+bool chip8_load_rom(chip8_t *cpu, const char *filename);
+void chip8_cycle(chip8_t *cpu);
 
 #endif // CHIP8_H
