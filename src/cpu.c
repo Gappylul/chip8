@@ -2,6 +2,7 @@
 
 #include "chip8.h"
 #include <string.h>
+#include <stdlib.h>
 
 const uint8_t fontset[80] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -64,7 +65,7 @@ void chip8_cycle(chip8_t *cpu) {
     switch (opcode & 0xF000) {
         case 0x0000:
             switch (opcode) {
-                case 0x0E00: // 0E00: Clear screen
+                case 0x00E0: // 00E0: Clear screen
                     memset(cpu->display, 0, sizeof(cpu->display));
                     break;
                 case 0x00EE: // 00EE: Return from subroutine
@@ -172,6 +173,26 @@ void chip8_cycle(chip8_t *cpu) {
                     printf("Unknown opcode [0x8000]: 0x%04X\n", opcode);
                     break;
             }
+            break;
+
+        case 0x9000: // 9XY0: Skip next instruction if Vx != Vy
+            if ((opcode & 0x000F) == 0) {
+                if (cpu->V[x] != cpu->V[y]) {
+                    cpu->PC += 2;
+                }
+            }
+            break;
+
+        case 0xA000: // ANNN: Set index register I = NNN
+            cpu->I = nnn;
+            break;
+
+        case 0xB000: // BNNN: Jump to location NNN + V0
+            cpu->PC = nnn + cpu->V[0];
+            break;
+
+        case 0xC000: // CXKK: Set Vx = random byte & KK
+            cpu->V[x] = (rand() % 256) & kk;
             break;
 
         default:

@@ -96,6 +96,63 @@ void test_alu_shifts(void) {
     assert(cpu.V[0xF] == 1);
 }
 
+void test_opcode_9xy0(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.V[0] = 0x11;
+    cpu.V[1] = 0x22;
+
+    // 9010 -> Skip if V0 != V1 (Should skip)
+    cpu.memory[0x200] = 0x90;
+    cpu.memory[0x201] = 0x10;
+    chip8_cycle(&cpu);
+    assert(cpu.PC == 0x204);
+
+    // 9010 -> Skip if V0 != V1 (Should not skip)
+    cpu.V[1] = 0x11;
+    cpu.PC = 0x202;
+    cpu.memory[0x202] = 0x90;
+    cpu.memory[0x203] = 0x10;
+    chip8_cycle(&cpu);
+    assert(cpu.PC == 0x204);
+}
+
+void test_opcode_annn(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    // A123 -> I = 0x123
+    cpu.memory[0x200] = 0xA1;
+    cpu.memory[0x201] = 0x23;
+    chip8_cycle(&cpu);
+    assert(cpu.I == 0x0123);
+}
+
+void test_opcode_bnnn(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.V[0] = 0x42;
+    // B100 -> PC = 0x100 + V0 = 0x142
+    cpu.memory[0x200] = 0xB1;
+    cpu.memory[0x201] = 0x00;
+    chip8_cycle(&cpu);
+    assert(cpu.PC == 0x0142);
+}
+
+void test_opcode_cxkk(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    // C00F -> V0 = rand() & 0x0F
+    cpu.memory[0x200] = 0xC0;
+    cpu.memory[0x201] = 0x0F;
+    chip8_cycle(&cpu);
+
+    assert((cpu.V[0] & 0xF0) == 0x00);
+}
+
 int main(void) {
     test_initialization();
     test_opcodes_6xkk_7xkk();
@@ -103,6 +160,10 @@ int main(void) {
     test_alu_add_carry();
     test_alu_sub_borrow();
     test_alu_shifts();
+    test_opcode_9xy0();
+    test_opcode_annn();
+    test_opcode_bnnn();
+    test_opcode_cxkk();
 
     printf("OK: All tests passed.\n");
     return 0;
