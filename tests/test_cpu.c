@@ -153,6 +153,87 @@ void test_opcode_cxkk(void) {
     assert((cpu.V[0] & 0xF0) == 0x00);
 }
 
+void test_opcode_f_timers(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.V[1] = 0x30;
+
+    // F115 -> Set delay_timer = V1
+    cpu.memory[0x200] = 0xF1;
+    cpu.memory[0x201] = 0x15;
+    chip8_cycle(&cpu);
+    assert(cpu.delay_timer == 0x30);
+
+    // F207 -> Set V2 = delay_timer
+    cpu.memory[0x202] = 0xF2;
+    cpu.memory[0x203] = 0x07;
+    chip8_cycle(&cpu);
+    assert(cpu.V[2] == 0x30);
+}
+
+void test_opcode_fx29_font_sprite(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    // Digit 'A' (0x0A) -> Each font sprite is 5 bytes tall
+    cpu.V[0] = 0x0A;
+
+    // F029 -> Set I to location of sprite for digit in V0
+    cpu.memory[0x200] = 0xF0;
+    cpu.memory[0x201] = 0x29;
+    chip8_cycle(&cpu);
+
+    assert(cpu.I == CHIP8_FONTSET_START + (0x0A * 5));
+    assert(cpu.memory[cpu.I] == 0xF0); // First byte of character 'A' sprite
+}
+
+void test_opcode_fx33_bcd(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.V[2] = 254; // Hundreds: 2, Tens: 5, Ones: 4
+    cpu.I = 0x300;
+
+    // F233 -> Store BCD of V2 at memory[I..I+2]
+    cpu.memory[0x200] = 0xF2;
+    cpu.memory[0x201] = 0x33;
+    chip8_cycle(&cpu);
+
+    assert(cpu.memory[0x300] == 2);
+    assert(cpu.memory[0x301] == 5);
+    assert(cpu.memory[0x302] == 4);
+}
+
+void test_opcode_fx55_fx65_reg_dump(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.V[0] = 0x11;
+    cpu.V[1] = 0x22;
+    cpu.V[2] = 0x33;
+    cpu.I = 0x400;
+
+    // F255 -> Dump V0..V2 to memory[I..I+2]
+    cpu.memory[0x200] = 0xF2;
+    cpu.memory[0x201] = 0x55;
+    chip8_cycle(&cpu);
+
+    assert(cpu.memory[0x400] == 0x11);
+    assert(cpu.memory[0x401] == 0x22);
+    assert(cpu.memory[0x402] == 0x33);
+
+    // Clear registers and read back from memory using F265
+    cpu.V[0] = 0; cpu.V[1] = 0; cpu.V[2] = 0;
+    cpu.memory[0x202] = 0xF2;
+    cpu.memory[0x203] = 0x65;
+    chip8_cycle(&cpu);
+
+    assert(cpu.V[0] == 0x11);
+    assert(cpu.V[1] == 0x22);
+    assert(cpu.V[2] == 0x33);
+}
+
 int main(void) {
     test_initialization();
     test_opcodes_6xkk_7xkk();
@@ -164,6 +245,10 @@ int main(void) {
     test_opcode_annn();
     test_opcode_bnnn();
     test_opcode_cxkk();
+    test_opcode_f_timers();
+    test_opcode_fx29_font_sprite();
+    test_opcode_fx33_bcd();
+    test_opcode_fx55_fx65_reg_dump();
 
     printf("OK: All tests passed.\n");
     return 0;

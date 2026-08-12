@@ -195,6 +195,52 @@ void chip8_cycle(chip8_t *cpu) {
             cpu->V[x] = (rand() % 256) & kk;
             break;
 
+        case 0xF000:
+            switch (opcode & 0x00FF) {
+                case 0x0007: // FX07: Set Vx = delay_timer
+                    cpu->V[x] = cpu->delay_timer;
+                    break;
+
+                case 0x0015: // FX15: Set delay_timer = Vx
+                    cpu->delay_timer = cpu->V[x];
+                    break;
+
+                case 0x0018: // FX18: Set sound_timer = Vx
+                    cpu->sound_timer = cpu->V[x];
+                    break;
+
+                case 0x001E: // FX1E: Set I += Vx
+                    cpu->I += cpu->V[x];
+                    break;
+
+                case 0x0029: // FX29: Set I = location of sprite for digit Vx
+                    cpu->I = CHIP8_FONTSET_START + ((cpu->V[x] & 0x0F) * 5);
+                    break;
+
+                case 0x0033: // FX33: Store BCD representation of Vx in memory at I, I+1, I+2
+                    cpu->memory[cpu->I]   = cpu->V[x] / 100;
+                    cpu->memory[cpu->I+1] = (cpu->V[x] / 10) % 10;
+                    cpu->memory[cpu->I+2] = cpu->V[x] % 10;
+                    break;
+
+                case 0x0055: // FX55: Store registers V0 through Vx in memory starting at I
+                    for (uint8_t i = 0; i <= x; i++) {
+                        cpu->memory[cpu->I + i] = cpu->V[i];
+                    }
+                    break;
+
+                case 0x0065: // FX65: Read registers V0 through Vx from memory starting at I
+                    for (uint8_t i = 0; i <= x; i++) {
+                        cpu->V[i] = cpu->memory[cpu->I + i];
+                    }
+                    break;
+
+                default:
+                    printf("Unknown opcode [0xF000]: 0x%04X\n", opcode);
+                    break;
+            }
+            break;
+
         default:
             printf("Unimplemented opcode: 0x%04X\n", opcode);
             break;
