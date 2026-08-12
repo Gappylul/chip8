@@ -273,6 +273,38 @@ void test_opcode_input(void) {
     assert(cpu.V[1] == 0x0A); // V1 holds the pressed key
 }
 
+void test_opcode_dxyn_graphics(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    // Let's create a 1-byte sprite: 0b11000000 (Two pixels on, six off)
+    cpu.I = 0x300;
+    cpu.memory[cpu.I] = 0xC0;
+
+    // Draw at X=0, Y=0 (V0=0, V1=0)
+    cpu.V[0] = 0;
+    cpu.V[1] = 0;
+
+    // D011 -> Draw 8x1 sprite at (V0, V1)
+    cpu.memory[0x200] = 0xD0;
+    cpu.memory[0x201] = 0x11;
+    chip8_cycle(&cpu);
+
+    assert(cpu.display[0] == 1); // Pixel 0,0 is ON
+    assert(cpu.display[1] == 1); // Pixel 1,0 is ON
+    assert(cpu.display[2] == 0); // Pixel 2,0 is OFF
+    assert(cpu.V[0xF] == 0);     // No collision occurred
+
+    // Draw the exact same sprite at the exact same location
+    cpu.PC = 0x200; // Reset PC to run the draw command again
+    chip8_cycle(&cpu);
+
+    // Because of XOR logic, drawing the same thing twice erases it
+    assert(cpu.display[0] == 0); // Pixel 0,0 is OFF
+    assert(cpu.display[1] == 0); // Pixel 1,0 is OFF
+    assert(cpu.V[0xF] == 1);     // Collision flag MUST be 1 because pixels were erased
+}
+
 int main(void) {
     test_initialization();
     test_opcodes_6xkk_7xkk();
@@ -289,6 +321,7 @@ int main(void) {
     test_opcode_fx33_bcd();
     test_opcode_fx55_fx65_reg_dump();
     test_opcode_input();
+    test_opcode_dxyn_graphics();
 
     printf("OK: All tests passed.\n");
     return 0;

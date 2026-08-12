@@ -195,6 +195,41 @@ void chip8_cycle(chip8_t *cpu) {
             cpu->V[x] = (rand() % 256) & kk;
             break;
 
+        case 0xD000: { // DXYN: Draw sprite at (Vx, Vy)
+            const uint8_t x_pos = cpu->V[x] % 64;
+            const uint8_t y_pos = cpu->V[y] % 32;
+            const uint8_t height = opcode & 0x000F;
+
+            // Reset collision flag
+            cpu->V[0xF] = 0;
+
+            for (uint8_t row = 0; row < height; row++) {
+                const uint8_t sprite_byte = cpu->memory[cpu->I + row];
+                const uint8_t pixel_y = y_pos + row;
+
+                if (pixel_y >= 32) break;
+
+                for (uint8_t col = 0; col < 8; col++) {
+                    const uint8_t pixel_x = x_pos + col;
+
+                    if (pixel_x >= 64) break;
+
+                    const uint8_t sprite_pixel = sprite_byte & (0x80 >> col);
+
+                    if (sprite_pixel) {
+                        const uint16_t pixel_idx = pixel_y * 64 + pixel_x;
+
+                        if (cpu->display[pixel_idx]) {
+                            cpu->V[0xF] = 1;
+                        }
+
+                        cpu->display[pixel_idx] ^= 1;
+                    }
+                }
+            }
+            break;
+        }
+
         case 0xE000:
             switch (opcode & 0x00FF) {
                 case 0x009E: // EX9E: Skip next instruction if key with value Vx is pressed
@@ -213,6 +248,7 @@ void chip8_cycle(chip8_t *cpu) {
                     printf("Unknown opcode [0xE000]: 0x%04X\n", opcode);
                     break;
             }
+            break;
 
         case 0xF000:
             switch (opcode & 0x00FF) {
