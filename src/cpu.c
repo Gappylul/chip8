@@ -117,23 +117,23 @@ void chip8_cycle(chip8_t *cpu) {
 
         case 0x8000:
             switch (opcode & 0x000F) {
-                case 0x0: // 8XY0: Set Vx = Vy
+                case 0x0000: // 8XY0: Set Vx = Vy
                     cpu->V[x] = cpu->V[y];
                     break;
 
-                case 0x1: // 8XY1: Set Vx = Vx | Vy
+                case 0x0001: // 8XY1: Set Vx = Vx | Vy
                     cpu->V[x] |= cpu->V[y];
                     break;
 
-                case 0x2: // 8XY2: Set Vx = Vx & Vy
+                case 0x0002: // 8XY2: Set Vx = Vx & Vy
                     cpu->V[x] &= cpu->V[y];
                     break;
 
-                case 0x3: // 8XY3: Set Vx = Vx ^ Vy
+                case 0x0003: // 8XY3: Set Vx = Vx ^ Vy
                     cpu->V[x] ^= cpu->V[y];
                     break;
 
-                case 0x4: {
+                case 0x0004: {
                     // 8XY4: Set Vx += Vy, set VF = carry
                     const uint16_t sum = cpu->V[x] + cpu->V[y];
                     cpu->V[x] = sum & 0xFF;
@@ -195,6 +195,25 @@ void chip8_cycle(chip8_t *cpu) {
             cpu->V[x] = (rand() % 256) & kk;
             break;
 
+        case 0xE000:
+            switch (opcode & 0x00FF) {
+                case 0x009E: // EX9E: Skip next instruction if key with value Vx is pressed
+                    if (cpu->keypad[cpu->V[x]]) {
+                        cpu->PC += 2;
+                    }
+                    break;
+
+                case 0x00A1: // EXA1: Skip next instruction if key with value Vx is not pressed
+                    if (!cpu->keypad[cpu->V[x]]) {
+                        cpu->PC += 2;
+                    }
+                    break;
+
+                default:
+                    printf("Unknown opcode [0xE000]: 0x%04X\n", opcode);
+                    break;
+            }
+
         case 0xF000:
             switch (opcode & 0x00FF) {
                 case 0x0007: // FX07: Set Vx = delay_timer
@@ -234,6 +253,24 @@ void chip8_cycle(chip8_t *cpu) {
                         cpu->V[i] = cpu->memory[cpu->I + i];
                     }
                     break;
+
+                case 0x000A: {
+                    // FX0A: Wait for keypress, store in Vx
+                    bool key_pressed = false;
+                    for (uint8_t i = 0; i < 16; i++) {
+                        if (cpu->keypad[i]) {
+                            cpu->V[x] = i;
+                            key_pressed = true;
+                            break;
+                        }
+                    }
+
+                    // If no key is pressed decrement PC to repeat this instruction
+                    if (!key_pressed) {
+                        cpu->PC -= 2;
+                    }
+                    break;
+                }
 
                 default:
                     printf("Unknown opcode [0xF000]: 0x%04X\n", opcode);

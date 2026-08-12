@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
+
 #include "chip8.h"
 
 void test_initialization(void) {
@@ -234,6 +236,43 @@ void test_opcode_fx55_fx65_reg_dump(void) {
     assert(cpu.V[2] == 0x33);
 }
 
+void test_opcode_input(void) {
+    chip8_t cpu;
+    chip8_init(&cpu);
+
+    cpu.V[0] = 0x05; // We are checking key 5
+    cpu.keypad[0x05] = 1; // Simulate key 5 being pressed
+
+    // EX9E -> Skip if key in V0 is pressed (Should skip)
+    cpu.memory[0x200] = 0xE0;
+    cpu.memory[0x201] = 0x9E;
+    chip8_cycle(&cpu);
+    assert(cpu.PC == 0x204);
+
+    // EXA1 -> Skip if key in V0 is NOT pressed (Should NOT skip)
+    cpu.PC = 0x204;
+    cpu.memory[0x204] = 0xE0;
+    cpu.memory[0x205] = 0xA1;
+    chip8_cycle(&cpu);
+    assert(cpu.PC == 0x206); // Only advanced 2 bytes
+
+    // FX0A -> Wait for key press
+    cpu.PC = 0x206;
+    cpu.memory[0x206] = 0xF1; // Store in V1
+    cpu.memory[0x207] = 0x0A;
+
+    // First, try with no keys pressed
+    memset(cpu.keypad, 0, sizeof(cpu.keypad));
+    chip8_cycle(&cpu);
+    assert(cpu.PC == 0x206); // PC should not advance (waiting)
+
+    // Now press a key (key 0x0A)
+    cpu.keypad[0x0A] = 1;
+    chip8_cycle(&cpu);
+    assert(cpu.PC == 0x208); // PC advanced!
+    assert(cpu.V[1] == 0x0A); // V1 holds the pressed key
+}
+
 int main(void) {
     test_initialization();
     test_opcodes_6xkk_7xkk();
@@ -249,6 +288,7 @@ int main(void) {
     test_opcode_fx29_font_sprite();
     test_opcode_fx33_bcd();
     test_opcode_fx55_fx65_reg_dump();
+    test_opcode_input();
 
     printf("OK: All tests passed.\n");
     return 0;
